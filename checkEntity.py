@@ -8,6 +8,7 @@ def checkEntity(arg):
         "&#39;": ".",
         "&ndash;": "-",
         "&copy;": "©",
+        "&quot;": "\"",
     }
 
     for entity in entities:

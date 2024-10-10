@@ -1,6 +1,16 @@
 from Text import Text
-from Tag import Tag
+from Element import Element
 import tkinter.font
+
+class TagFlipper:
+    def __init__(self, value1, value2):
+       self.values = [value1, value2]
+       self.current_index = 0
+
+    def flip(self):
+        current_value = self.values[self.current_index]
+        self.current_index = 1 - self.current_index  # Switch index between 0 and 1
+        return current_value
 
 class Layout:
     def __init__(self, tokens, SCwidth, SCheight, HSTEP, VSTEP) -> None:
@@ -23,11 +33,22 @@ class Layout:
         self.size = 16
         self.centered = False
 
+        #tags
+        self.italics = TagFlipper("italic", "roman")
+        self.superscript = TagFlipper(0.5,2)
+        self.abbreviate = TagFlipper(4, -4)
+        self.bold = TagFlipper("bold", "normal")
+        self.small = TagFlipper(2, -2)
+        self.big = TagFlipper(4, -4)
+        self.center = TagFlipper(True, False)
+        self.titleTag = TagFlipper(True, False)
+        
+
         # stores fonts
         self.fonts = {}
 
-        for tok in tokens:
-            self.token(tok)
+        # parse the tree
+        self.tree(tokens)
 
         self.flush()
 
@@ -74,55 +95,46 @@ class Layout:
         self.cursor_x = self.HSTEP
         self.line = []
 
-    def token(self, tok):
-        # changes spacing based on inputs
-        if isinstance(tok, Text):
-            for word in tok.text.split():
-                self.word(word)
+    def swapTag(self, tag):
+        if tag == "i":
+            self.style = self.italics.flip()
 
-                if word == "\n":
-                    self.cursor_y += self.VSTEP  # Increment y by more than VSTEP for paragraph breaks
-                    self.cursor_x = self.HSTEP
-                    continue
+        elif tag == "sup":
+            self.size *= self.superscript.flip()
 
-        elif tok.tag == "i":
-            self.style = "italic"
-        elif tok.tag == "/i":
-            self.style = "roman"
-        elif tok.tag == "sup":
-            self.size /= 2
-        elif tok.tag == "/sup":
-            self.size *= 2
-        elif tok.tag == "abbr":
-            self.size -= 4
-        elif tok.tag == "/abbr":
-            self.size += 4
-        elif tok.tag == "b":
-            self.weight = "bold"
-        elif tok.tag == "/b":
-            self.weight = "normal"
-        elif tok.tag == "small":
-            self.size -= 2
-        elif tok.tag == "/small":
-            self.size += 2
-        elif tok.tag == "big":
-            self.size += 4
-        elif tok.tag == "/big":
-            self.size -= 4
-        elif tok.tag == "br":
+        elif tag == "abbr":
+            self.size += self.abbreviate.flip()
+
+        elif tag == "b":
+            self.weight = self.bold.flip()
+            
+        elif tag == "small":
+            self.size += self.small.flip()
+
+        elif tag == "big":
+            self.size += self.big.flip()
+
+        elif tag == "center":
+            self.centered = self.center.flip()
+
+        elif tag == "br":
             self.flush()
-        elif tok.tag == "/p":
+            
+        elif tag == "p":
             self.flush()
             self.cursor_y += self.VSTEP
-        elif tok.tag == 'h1 class="title"':
+
+        elif tag == "h1 class='title" or tag == "h1":
             self.flush()
-            self.centered = True
-        elif tok.tag == "/h1":
-            self.flush()
-            self.centered = False
-        elif tok.tag == "center":
-            self.flush()
-            self.centered = True
-        elif tok.tag == "/center":
-            self.flush()
-            self.centered = False
+            self.titleTag.flip()
+      
+    def tree(self, tree):
+        if isinstance(tree, Text):
+            for word in tree.text.split():
+                self.word(word)
+
+        else:
+            self.swapTag(tree.tag)
+            for child in tree.children:
+                self.tree(child)
+            self.swapTag(tree.tag)

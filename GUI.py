@@ -3,8 +3,9 @@ import tkinter
 import tkinter.font
 from checkEntity import checkEntity
 from Text import Text
-from Tag import Tag
+from Element import Element
 from Layout import Layout
+from HTMLParser import HTMLParser
 # needs alternate text alignment
 
 class GUI:
@@ -72,52 +73,20 @@ class GUI:
  
     def load(self, url):
         body, tag = url.requests()
-        self.tokens = self.displayContent(body, tag)
-        self.displayList = Layout(self.tokens, self.SCwidth, self.SCheight, self.HSTEP, self.VSTEP).displayList
+        self.nodes = HTMLParser(body).parse()
+        self.displayList = Layout(self.nodes, self.SCwidth, self.SCheight, self.HSTEP, self.VSTEP).displayList
         self.draw()
 
     def displayContent(self, body, scheme):
-        tag = False
-        out = []
-        buffer = ""
-        putUppercase = False
+        print(body)
+        parser = HTMLParser(body)
+        parser.parse()
+        return parser.finish()
         
-        if scheme == "view-source":
-            return body
-        
-        for item in body:
-            match item:
-                case "<":
-                    tag = True
-                    if buffer and not putUppercase:
-                        out.append(Text(buffer))
-                    if buffer and putUppercase:
-                        out.append(Text(buffer.upper()))
-                    if buffer == "center":
-                        out.append(Tag("br"))
-
-                    buffer = ""
-
-                case ">":
-                    tag = False
-                    if buffer == "abbr":
-                        putUppercase = True
-                    elif buffer == "/abbr":
-                        putUppercase = False
-                    out.append(Tag(buffer))
-                    buffer = ""
-
-                case _:
-                    buffer += item
-                    buffer = checkEntity(buffer)
-
-        if not tag and buffer:
-            out.append(Text(buffer))
-        return out
     # called when window is resized
     def resize(self, e):
         self.SCwidth = e.width
         self.SCheight = e.height
-        self.displayList = Layout(self.tokens, self.SCwidth, self.SCheight, self.HSTEP, self.VSTEP).displayList
+        self.displayList = Layout(self.nodes, self.SCwidth, self.SCheight, self.HSTEP, self.VSTEP).displayList
         self.draw()
 
