@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import customtkinter
 import tkinter
 import tkinter.font
@@ -207,10 +208,30 @@ if __name__ == "__main__":
     global SCwidth, SCheight
     SCwidth = window.winfo_screenwidth()
     SCheight = window.winfo_screenheight()
+=======
+from URL import URL
+from GUI import GUI
+import tkinter;
+
+if __name__ == "__main__":
+    import sys
+
+    HSTEP, VSTEP, SCROLL_STEP = 13, 18, 100
+    tags = ""
+    if len(sys.argv) >= 2:
+        tags = sys.argv[2:]
+    window = GUI(tags)
+>>>>>>> master
 
     if len(sys.argv) > 1:
         url = URL(sys.argv[1])
     else:
         url = URL("about:blank")
+<<<<<<< HEAD
     browser = Browser(window, url)
     window.mainloop()
+=======
+
+    window.load(url)
+    tkinter.mainloop()
+>>>>>>> master
