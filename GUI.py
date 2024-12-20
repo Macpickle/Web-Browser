@@ -72,21 +72,17 @@ class GUI:
             self.lastY = y
  
     def load(self, url):
-        body, tag = url.requests()
-        self.nodes = HTMLParser(body).parse()
-        self.displayList = Layout(self.nodes, self.SCwidth, self.SCheight, self.HSTEP, self.VSTEP).displayList
+        body, self.tag = url.requests()
+        self.nodes = HTMLParser(body).parse(self.tag)            
+        self.displayList = Layout(self.nodes, None, None, self.SCwidth, self.SCheight, self.HSTEP, self.VSTEP).displayList
         self.draw()
 
-    def displayContent(self, body, scheme):
-        print(body)
-        parser = HTMLParser(body)
-        parser.parse()
-        return parser.finish()
-        
     # called when window is resized
     def resize(self, e):
         self.SCwidth = e.width
         self.SCheight = e.height
-        self.displayList = Layout(self.nodes, self.SCwidth, self.SCheight, self.HSTEP, self.VSTEP).displayList
+        self.displayList = Layout(self.nodes, None, None, self.SCwidth, self.SCheight, self.HSTEP, self.VSTEP).displayList
         self.draw()
+        
+        
 

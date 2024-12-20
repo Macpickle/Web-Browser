@@ -1,18 +1,5 @@
-def checkEntity(arg):
-    entities = {
-        "&gt;": ">",
-        "&lt;": "<",
-        "&amp;": "&",
-        "&quot;": "\"",
-        "&apos;": "\'",
-        "&#39;": ".",
-        "&ndash;": "-",
-        "&copy;": "©",
-        "&quot;": "\"",
-    }
+from w3lib.html import replace_entities
 
-    for entity in entities:
-        if entity in arg:
-            arg = arg.replace(entity, entities[entity])
-            
-    return arg
+def checkEntity(arg):
+    # replaces entities in text using w3lib
+    return replace_entities(arg)

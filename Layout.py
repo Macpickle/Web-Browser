@@ -2,6 +2,7 @@ from Text import Text
 from Element import Element
 import tkinter.font
 
+# flips state of tags to open/close each
 class TagFlipper:
     def __init__(self, value1, value2):
        self.values = [value1, value2]
@@ -13,9 +14,14 @@ class TagFlipper:
         return current_value
 
 class Layout:
-    def __init__(self, tokens, SCwidth, SCheight, HSTEP, VSTEP) -> None:
+    def __init__(self, node, parent, previous, SCwidth, SCheight, HSTEP, VSTEP) -> None:
         self.displayList = []
         self.line = []
+
+        self.node = node
+        self.parent = parent
+        self.previous = previous
+        self.child = []
         
         # spacing
         self.HSTEP = HSTEP
@@ -33,7 +39,7 @@ class Layout:
         self.size = 16
         self.centered = False
 
-        #tags
+        # tags
         self.italics = TagFlipper("italic", "roman")
         self.superscript = TagFlipper(0.5,2)
         self.abbreviate = TagFlipper(4, -4)
@@ -42,15 +48,24 @@ class Layout:
         self.big = TagFlipper(4, -4)
         self.center = TagFlipper(True, False)
         self.titleTag = TagFlipper(True, False)
+        self.commentTag = TagFlipper(True, False)
         
-
         # stores fonts
         self.fonts = {}
 
         # parse the tree
-        self.tree(tokens)
-
+        self.tree(self.node)
         self.flush()
+
+    # advanced layout
+    def layout(self) -> None:
+        prev = None
+
+        for child in self.node.children:
+            next = Layout(child, self, prev)
+            self.children.append(next)
+            prev = next
+
 
     # gets spacing for each word, depending on size and location
     def word(self, word) -> None:
@@ -127,6 +142,14 @@ class Layout:
         elif tag == "h1 class='title" or tag == "h1":
             self.flush()
             self.titleTag.flip()
+
+        elif tag == "<!--" or tag == "-->":
+            self.commentTag.flip()
+
+        elif tag == "pre":
+            self.flush()
+            self.cursor_x = self.HSTEP
+            self.cursor_y += self.VSTEP
       
     def tree(self, tree):
         if isinstance(tree, Text):
@@ -137,4 +160,5 @@ class Layout:
             self.swapTag(tree.tag)
             for child in tree.children:
                 self.tree(child)
+
             self.swapTag(tree.tag)

@@ -1,6 +1,6 @@
 from Text import Text
 from Element import Element
-import sys
+from checkEntity import checkEntity
 from URL import URL
 
 class HTMLParser:
@@ -9,25 +9,56 @@ class HTMLParser:
         self.unfinished = []
         self.selfClosing = [ "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr", ] # tags that dont require a closing tag
         self.headTags = [ "base", "basefont", "bgsound", "noscript", "link", "meta", "title", "style", "script"] # tags that are only allowed in the head tag
+        self.in_style_tag = False  # Flag to track if inside a <style> tag
 
     # parse body of html
-    def parse(self):
+    def parse(self, scheme):
         text = ""
+        attribute_text = ""
         in_tag = False
+        in_script_tag = False  # Flag to track if inside a <script> tag
+        in_attribute = False # Flag to track if inside attribute
+
+        if scheme == "view-source":
+            return Text(self.body, None)
+        
         for c in self.body:
             if c == "<":
                 in_tag = True
-                if text: self.addText(text)
+                if not self.in_style_tag: pass
+                if not in_script_tag: pass
+                if attribute_text:
+                    self.addText(checkEntity(attribute_text))
+                    
+                if text:
+                    self.addText(checkEntity(text))
+
                 text = ""
+
             elif c == ">":
                 in_tag = False
+                tag_name = text.split()[0].lower()
+                if tag_name == "script":
+                    in_script_tag = True
+                elif tag_name == "/script":
+                    in_script_tag = False
                 self.addTag(text)
                 text = ""
-            else:
-                text += c
-        if not in_tag and text:
-            self.addText(text)
 
+            else:
+                if c == '"' or c == "'":
+                    in_attribute = not in_attribute
+                    attribute_text = ""
+
+                if in_attribute: 
+                    attribute_text += c
+
+                else:
+                    text += c
+                    
+        if not in_tag and text and not self.in_style_tag and not in_script_tag:
+            self.addText(checkEntity(text))
+        
         return self.finish()
     
     # checks for header tags if they are not present
@@ -53,7 +84,7 @@ class HTMLParser:
 
     # creates a text node
     def addText(self, text):
-        if text.isspace(): return
+        if text.isspace() or self.in_style_tag: return
         self.implicitTags(None)
 
         parent = self.unfinished[-1]
@@ -62,8 +93,8 @@ class HTMLParser:
 
     # creates a tag node
     def addTag(self, tag):
-        tag, attributes = self.getAttributes(tag)
-        if tag.startswith("!"): return
+        tag, attributes = self.getAttributes(tag)  
+        if tag.startswith("!doctype"): return
         self.implicitTags(tag)
 
         if tag.startswith("/"):
@@ -71,6 +102,8 @@ class HTMLParser:
             node = self.unfinished.pop()
             parent = self.unfinished[-1]
             parent.children.append(node)
+            if tag == "/style":
+                self.in_style_tag = False  # Exiting a <style> tag
 
         elif tag in self.selfClosing:
             parent = self.unfinished[-1]
@@ -81,6 +114,8 @@ class HTMLParser:
             parent = self.unfinished[-1] if self.unfinished else None
             node = Element(tag, parent, attributes)
             self.unfinished.append(node)
+            if tag == "style":
+                self.in_style_tag = True  # Entering a <style> tag
 
     # gets attributes of text
     def getAttributes(self, text):
@@ -111,3 +146,9 @@ class HTMLParser:
             parent = self.unfinished[-1]
             parent.children.append(node)
         return self.unfinished.pop()
+
+    # debug print
+    def print_tree(self, node, indent=0):
+        print(" " * indent, node)
+        for child in node.children:
+            self.print_tree(child, indent + 2)
