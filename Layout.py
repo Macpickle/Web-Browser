@@ -1,6 +1,17 @@
 from Text import Text
 from Element import Element
 import tkinter.font
+from globals import *
+
+# globals
+BLOCK_ELEMENTS = [
+    "html", "body", "article", "section", "nav", "aside",
+    "h1", "h2", "h3", "h4", "h5", "h6", "hgroup", "header",
+    "footer", "address", "p", "hr", "pre", "blockquote",
+    "ol", "ul", "menu", "li", "dl", "dt", "dd", "figure",
+    "figcaption", "main", "div", "table", "form", "fieldset",
+    "legend", "details", "summary"
+]
 
 # flips state of tags to open/close each
 class TagFlipper:
@@ -14,7 +25,7 @@ class TagFlipper:
         return current_value
 
 class Layout:
-    def __init__(self, node, parent, previous, SCwidth, SCheight, HSTEP, VSTEP) -> None:
+    def __init__(self, node, parent, previous) -> None:
         self.displayList = []
         self.line = []
 
@@ -22,18 +33,16 @@ class Layout:
         self.parent = parent
         self.previous = previous
         self.child = []
-        
-        # spacing
-        self.HSTEP = HSTEP
-        self.VSTEP = VSTEP
 
-        # window sizes
-        self.SCwidth = SCwidth
-        self.SCheight = SCheight
+        #position of layout object
+        self.x = None
+        self.y = None
+        self.width = None
+        self.height = None
 
         # font variance
-        self.cursor_x = self.HSTEP
-        self.cursor_y = self.VSTEP
+        self.cursor_x = 0
+        self.cursor_y = 0
         self.weight = "normal"
         self.style = "roman"
         self.size = 16
@@ -54,25 +63,67 @@ class Layout:
         self.fonts = {}
 
         # parse the tree
-        self.tree(self.node)
+        self.recurse(self.node)
         self.flush()
 
     # advanced layout
     def layout(self) -> None:
-        prev = None
+        if self.previous:
+            self.y = self.previous.y + self.previous.height
+        else:
+            self.y = self.parent.y
 
-        for child in self.node.children:
-            next = Layout(child, self, prev)
-            self.children.append(next)
-            prev = next
+        self.x = self.parent.x
+        self.width = self.parent.width
 
+        mode = self.layout_mode()
+
+        if mode == "block":
+            # intermediate
+            prev = None
+            
+            for child in self.node.children:
+                next = Layout(child, self, prev)
+                self.children.append(next)
+                prev = next
+
+            self.height = sum([child.height for child in self.children])
+
+        else:
+            self.cursor_x = 0
+            self.cursor_y = 0
+            self.height = self.cursor_y
+
+            self.weight = "normal"
+            self.style = "roman"
+            self.size = 12
+
+            self.line = []
+            self.recurse(self.node)
+            self.flush()
+
+        for child in self.children:
+            child.layout()
+
+    def layout_mode(self):
+        if isinstance(self.node, Text):
+            return "inline"
+        
+        elif any([isinstance(child, Element) and \
+                  child.tag in BLOCK_ELEMENTS
+                  for child in self.node.children]):
+            return "block"
+        elif self.node.children:
+            return "inline"
+        else:
+            return "block"
 
     # gets spacing for each word, depending on size and location
     def word(self, word) -> None:
         font = self.getFonts(self.size, self.weight, self.style)
         w = font.measure(word)
 
-        if self.cursor_x + w > self.SCwidth - self.HSTEP:
+        if self.cursor_x + w > self.width:
             self.flush()
 
         self.line.append((self.cursor_x, word, font))
@@ -99,15 +150,16 @@ class Layout:
         baseline = self.cursor_y + 1.25 * max_ascent
 
         # add the new values to the list
-        for x, word, font in self.line:
-            y = baseline - font.metrics("ascent")
+        for rel_x, word, font in self.line:
+            x = self.x + rel_x
+            y = self.y + baseline - font.metrics("ascent")
             self.displayList.append((x, y, word, font))
 
         # return the spacing
         max_descent = max([metric["descent"] for metric in metrics])
         self.cursor_y = baseline + 1.25 * max_descent
 
-        self.cursor_x = self.HSTEP
+        self.cursor_x = 0
         self.line = []
 
     def swapTag(self, tag):
@@ -137,7 +189,7 @@ class Layout:
             
         elif tag == "p":
             self.flush()
-            self.cursor_y += self.VSTEP
+            self.cursor_y += VSTEP
 
         elif tag == "h1 class='title" or tag == "h1":
             self.flush()
@@ -148,10 +200,10 @@ class Layout:
 
         elif tag == "pre":
             self.flush()
-            self.cursor_x = self.HSTEP
-            self.cursor_y += self.VSTEP
+            self.cursor_x = HSTEP
+            self.cursor_y += VSTEP
       
-    def tree(self, tree):
+    def recurse(self, tree):
         if isinstance(tree, Text):
             for word in tree.text.split():
                 self.word(word)
@@ -159,6 +211,7 @@ class Layout:
         else:
             self.swapTag(tree.tag)
             for child in tree.children:
-                self.tree(child)
+                self.recurse(child)
 
             self.swapTag(tree.tag)
+            

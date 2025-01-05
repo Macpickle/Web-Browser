@@ -6,6 +6,8 @@ from Text import Text
 from Element import Element
 from Layout import Layout
 from HTMLParser import HTMLParser
+
+from globals import *
 # needs alternate text alignment
 
 class GUI:
@@ -22,13 +24,12 @@ class GUI:
 
         self.canvas.pack(fill="both", expand=True)
 
-        self.SCwidth = window.winfo_screenwidth()
-        self.SCheight = window.winfo_screenheight()
+        update_globals(window.winfo_screenwidth(), window.winfo_screenheight())
 
         # scrolling option
         self.scroll = 0
         self.lastY = 1
-        self.SCROLL_STEP, self.HSTEP, self.VSTEP = 100, 13, 18
+        self.SCROLL_STEP = 100
 
         window.bind("<Down>", self.scrolldown)
         window.bind("<Up>", self.scrollup)
@@ -39,8 +40,8 @@ class GUI:
 
     # checks if the scroll is is in range of text
     def checkInRange(self, y):
-        if not self.scroll < self.lastY - self.SCheight:
-            self.scroll = self.lastY - self.SCheight
+        if not self.scroll < self.lastY - SCheight:
+            self.scroll = self.lastY - SCheight
 
         if self.scroll < 100:
             self.scroll = 100
@@ -65,24 +66,29 @@ class GUI:
 
         # adds text to canvas
         for x, y, text, font in self.displayList:
-            if y > self.scroll + self.SCheight: continue
-            if y + self.VSTEP < self.scroll: continue
+            if y > self.scroll + SCheight: continue
+            if y + VSTEP < self.scroll: continue
             
             self.canvas.create_text(x, y - self.scroll, font=font, text=text, anchor='nw')
             self.lastY = y
  
     def load(self, url):
         body, self.tag = url.requests()
-        self.nodes = HTMLParser(body).parse(self.tag)            
-        self.displayList = Layout(self.nodes, None, None, self.SCwidth, self.SCheight, self.HSTEP, self.VSTEP).displayList
+        self.nodes = HTMLParser(body).parse(self.tag)    
+        #print_tree(self.nodes, 0)        
+        self.displayList = Layout(self.nodes, None, None).displayList
         self.draw()
 
     # called when window is resized
     def resize(self, e):
-        self.SCwidth = e.width
-        self.SCheight = e.height
-        self.displayList = Layout(self.nodes, None, None, self.SCwidth, self.SCheight, self.HSTEP, self.VSTEP).displayList
+        update_globals(e.width, e.height)
+        self.displayList = Layout(self.nodes, None, None).displayList
         self.draw()
         
         
 
+
+def print_tree(node, indent=0):
+    print(" " * indent, node)
+    for child in node.children:
+        print_tree(child, indent + 2)
