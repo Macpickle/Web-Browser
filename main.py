@@ -1,5 +1,5 @@
 from URL import URL
-from GUI import GUI
+from Browser import Browser
 import tkinter;
 
 if __name__ == "__main__":
@@ -9,7 +9,7 @@ if __name__ == "__main__":
     tags = ""
     if len(sys.argv) >= 2:
         tags = sys.argv[2:]
-    window = GUI(tags)
+    window = Browser(tags)
 
     if len(sys.argv) > 1:
         url = URL(sys.argv[1])

@@ -1,25 +1,22 @@
 from Layout import Layout
-from globals import *
+import globals
 
 class DocumentLayout:
     def __init__(self, node):
         self.node = node
         self.parent = None
+        self.previous = None
         self.children = []
-
-        # position of document layout
-        self.x = None
-        self.y = None
-        self.width = None
-        self.height = None
 
     def layout(self):
         child = Layout(self.node, self, None)
         self.children.append(child)
-        child.layout()
 
-        self.width = SCwidth - 2*HSTEP
-        self.x = HSTEP
-        self.y = VSTEP
+        self.width = globals.SCwidth - 2*globals.HSTEP
+        self.x = globals.HSTEP
+        self.y = globals.VSTEP
         child.layout()
         self.height = child.height
+
+    def paint(self):
+        return []

@@ -1,7 +1,7 @@
 from Text import Text
 from Element import Element
 import tkinter.font
-from globals import *
+import globals
 
 # globals
 BLOCK_ELEMENTS = [
@@ -26,19 +26,17 @@ class TagFlipper:
 
 class Layout:
     def __init__(self, node, parent, previous) -> None:
-        self.displayList = []
-        self.line = []
-
         self.node = node
         self.parent = parent
         self.previous = previous
-        self.child = []
+        self.children = []
 
         #position of layout object
         self.x = None
         self.y = None
         self.width = None
         self.height = None
+        self.displayList = []
 
         # font variance
         self.cursor_x = 0
@@ -62,38 +60,30 @@ class Layout:
         # stores fonts
         self.fonts = {}
 
-        # parse the tree
-        self.recurse(self.node)
-        self.flush()
-
     # advanced layout
     def layout(self) -> None:
+        self.x = self.parent.x
+        self.width = self.parent.width
+
         if self.previous:
             self.y = self.previous.y + self.previous.height
         else:
             self.y = self.parent.y
 
-        self.x = self.parent.x
-        self.width = self.parent.width
-
         mode = self.layout_mode()
 
         if mode == "block":
             # intermediate
-            prev = None
+            previous = None
             
             for child in self.node.children:
-                next = Layout(child, self, prev)
+                next = Layout(child, self, previous)
                 self.children.append(next)
-                prev = next
-
-            self.height = sum([child.height for child in self.children])
+                previous = next
 
         else:
             self.cursor_x = 0
             self.cursor_y = 0
-            self.height = self.cursor_y
-
             self.weight = "normal"
             self.style = "roman"
             self.size = 12
@@ -105,6 +95,12 @@ class Layout:
         for child in self.children:
             child.layout()
 
+        if mode == "block":
+            self.height = sum([
+                child.height for child in self.children])
+        else:
+            self.height = self.cursor_y
+        
     def layout_mode(self):
         if isinstance(self.node, Text):
             return "inline"
@@ -123,7 +119,7 @@ class Layout:
         font = self.getFonts(self.size, self.weight, self.style)
         w = font.measure(word)
 
-        if self.cursor_x + w > self.width:
+        if self.cursor_x + w > self.width - 2 * globals.HSTEP:
             self.flush()
 
         self.line.append((self.cursor_x, word, font))
@@ -155,12 +151,12 @@ class Layout:
             y = self.y + baseline - font.metrics("ascent")
             self.displayList.append((x, y, word, font))
 
+        self.cursor_x = 0
+        self.line = []
+
         # return the spacing
         max_descent = max([metric["descent"] for metric in metrics])
         self.cursor_y = baseline + 1.25 * max_descent
-
-        self.cursor_x = 0
-        self.line = []
 
     def swapTag(self, tag):
         if tag == "i":
@@ -189,7 +185,7 @@ class Layout:
             
         elif tag == "p":
             self.flush()
-            self.cursor_y += VSTEP
+            self.cursor_y += globals.VSTEP
 
         elif tag == "h1 class='title" or tag == "h1":
             self.flush()
@@ -200,8 +196,8 @@ class Layout:
 
         elif tag == "pre":
             self.flush()
-            self.cursor_x = HSTEP
-            self.cursor_y += VSTEP
+            self.cursor_x = globals.HSTEP
+            self.cursor_y += globals.VSTEP
       
     def recurse(self, tree):
         if isinstance(tree, Text):
@@ -214,4 +210,7 @@ class Layout:
                 self.recurse(child)
 
             self.swapTag(tree.tag)
+
+    def paint(self):
+        return self.displayList
             
