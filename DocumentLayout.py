@@ -12,7 +12,7 @@ class DocumentLayout:
         child = Layout(self.node, self, None)
         self.children.append(child)
 
-        self.width = globals.SCwidth - 2*globals.HSTEP
+        self.width = globals.SCwidth - 2 * globals.HSTEP
         self.x = globals.HSTEP
         self.y = globals.VSTEP
         child.layout()

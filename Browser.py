@@ -41,46 +41,35 @@ class Browser:
         self.lastY = 1
         self.SCROLL_STEP = 100
 
-        window.bind("<Down>", self.scrolldown)
-        window.bind("<Up>", self.scrollup)
-        window.bind("<MouseWheel>", self.on_mouse_wheel)
-
-        #resizing window
+        window.bind("<MouseWheel>", self.scroll_window)
+        window.bind("<Up>", self.scroll_window)
+        window.bind("<Down>", self.scroll_window)
         window.bind("<Configure>", self.resize)
 
-    # checks if the scroll is is in range of text
-    def checkInRange(self, y):
-        if not self.scroll < self.lastY - globals.SCheight:
-            self.scroll = self.lastY - globals.SCheight
+    # window manipulation functions
+    def scroll_window(self, e):
+        if e.keysym == "Up":
+            new_scroll = self.scroll - self.SCROLL_STEP
+        elif e.keysym == "Down":
+            new_scroll = self.scroll + self.SCROLL_STEP
+        else:
+            new_scroll = self.scroll - e.delta / 120 * self.SCROLL_STEP
+            max_scroll = max(command.y1 for command in self.display_list) - globals.SCheight
+            self.scroll = max(0, min(new_scroll, max_scroll))
+            self.draw()
 
-        if self.scroll < 100:
-            self.scroll = 100
-
-    def scrolldown(self, e):
-        self.checkInRange(self.lastY)
-        self.scroll += self.SCROLL_STEP
-        self.draw()
-
-    def scrollup(self, e):
-        self.checkInRange(self.lastY)
-        self.scroll -= self.SCROLL_STEP
-        self.draw()
-
-    def on_mouse_wheel(self, e):
-        self.checkInRange(self.lastY)
-        self.scroll -= e.delta
+    def resize(self, e):
+        globals.update_globals(e.width, e.height)
         self.draw()
 
     def draw(self):
         self.canvas.delete("all")
 
-        # adds text to canvas
-        for x, y, text, font in self.display_list:
-            if y > self.scroll + globals.SCheight: continue
-            if y + globals.VSTEP < self.scroll: continue
-            
-            self.canvas.create_text(x, y - self.scroll, font=font, text=text, anchor='nw')
-            self.lastY = y
+        #places object on canvas
+        for command in self.display_list:
+            if command.x1 > self.scroll + globals.SCheight: continue
+            if command.y1 < self.scroll: continue
+            command.execute(self.scroll, self.canvas)
  
     def load(self, url):
         body, self.tag = url.requests()
@@ -90,12 +79,8 @@ class Browser:
         self.display_list = []
         paint_tree(self.document, self.display_list)
         self.draw()
-
-    # called when window is resized
-    def resize(self, e):
-        globals.update_globals(e.width, e.height)
-        self.draw()
         
+# debug for tree structure
 def print_tree(node, indent=0):
     print(" " * indent, node)
     for child in node.children:

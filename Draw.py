@@ -1,0 +1,35 @@
+class DrawText:
+    def __init__(self, x1, y1, text, font):
+        self.x1 = x1
+        self.y1 = y1
+        self.text = text
+        self.font = font
+        self.y1 = y1 + font.metrics("linespace")
+
+    def execute(self, scroll, canvas):
+        canvas.create_text(
+            self.x1, 
+            self.y1 - scroll,
+            text = self.text,
+            font = self.font,
+            anchor = 'nw',
+        ) 
+
+class DrawRectangle:
+    def __init__(self, x1, y1, x2, y2, colour):
+        self.x1 = x1
+        self.y1 = y1
+        self.x2 = x2
+        self.y2 = y2
+        self.colour = colour
+
+    def execute(self, scroll, canvas):
+        canvas.create_rectangle(
+            self.x1, 
+            self.y1 - scroll,
+            self.x2, 
+            self.y2 - scroll,
+            width=0,
+            fill=self.colour
+        )
+        

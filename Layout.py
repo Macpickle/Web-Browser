@@ -1,5 +1,6 @@
 from Text import Text
 from Element import Element
+import Draw
 import tkinter.font
 import globals
 
@@ -118,8 +119,8 @@ class Layout:
     def word(self, word) -> None:
         font = self.getFonts(self.size, self.weight, self.style)
         w = font.measure(word)
-
-        if self.cursor_x + w > self.width - 2 * globals.HSTEP:
+        # need to fix later, width not reaching end unless this formula \/
+        if self.cursor_x + w > self.width: 
             self.flush()
 
         self.line.append((self.cursor_x, word, font))
@@ -212,5 +213,16 @@ class Layout:
             self.swapTag(tree.tag)
 
     def paint(self):
-        return self.displayList
+        commands = []
+
+        if isinstance(self.node, Element) and self.node.tag == "pre":
+            x2, y2 = self.x + self.width, self.y + self.height
+            rect = Draw.DrawRectangle(self.x, self.y, x2, y2, "gray")
+            commands.append(rect)
+
+        if self.layout_mode() == "inline":
+            for x, y, word, font in self.displayList:
+                commands.append(Draw.DrawText(x, y, word, font))
+
+        return commands
             
