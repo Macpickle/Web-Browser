@@ -1,3 +1,5 @@
+from HTMl_Tags import TagSelector, DescendantSelector
+
 class CSSParser:
     def __init__(self, s):
         self.s = s
@@ -41,7 +43,7 @@ class CSSParser:
     def body(self):
         pairs = {}
 
-        while self.index < len(self.s):
+        while self.index < len(self.s) and self.s[self.index] != "}":
             try:
                 prop, val = self.pair() 
                 pairs[prop.casefold()] = val # set hash val
@@ -50,7 +52,7 @@ class CSSParser:
                 self.whitespace()
 
             except Exception:
-                reason = self.ignore([";"])
+                reason = self.ignore([";", "}"])
 
                 if reason == ";":
                     self.literal(";")
@@ -73,4 +75,39 @@ class CSSParser:
         # no errors
         return None
 
-        
+    # selector
+    def selector(self) -> TagSelector:
+        out = TagSelector(self.word().casefold())
+        self.whitespace()
+
+        while self.index < len(self.s) and self.s[self.index] != "{":
+            tag = self.word()
+            descendant = TagSelector(tag.casefold())
+            out = DescendantSelector(out, descendant)
+            self.whitespace()
+        return out
+    
+    # parses CSS files
+    def parse(self):
+        rules = []
+
+        while self.index < len(self.s):
+            try:
+                self.whitespace()
+                selector = self.selector() # get selector for CSS
+                self.literal("{")
+                self.whitespace()
+                body = self.body() # get body for CSS from selector
+                self.literal("}")
+                rules.append((selector, body)) # append to rules
+
+            except:
+                # parser error
+                reason = self.ignore_until(["}"])
+                if reason == "}":
+                    self.literal("}")
+                    self.whitespace()
+                else:
+                    break
+                    
+        return rules

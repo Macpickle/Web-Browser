@@ -4,14 +4,71 @@ import tkinter.font
 from checkEntity import checkEntity
 from HTMl_Tags import Element
 from DocumentLayout import DocumentLayout
-from Layout import Layout
 from HTMLParser import HTMLParser
 from CSSParser import CSSParser
 
 import globals
+CSS_SHEET = CSSParser(open("browser.css").read()).parse() # read and open CSS files 
+
+INHERITED_PROPERTIES = {
+    "font-size": "16px",
+    "font-style": "normal",
+    "font-weight": "normal",
+    "color": "black",
+}
+
+# ranks each rule by priority
+def cascade_priority(rule) -> int:
+    selector, body = rule
+    return selector.priority
+
+# converts a tree into a list nodes
+def treeToList(tree, list) -> list:
+    list.append(tree)
+
+    for child in tree.children:
+        treeToList(child, list)
+
+    return list
+
+# css styling of node
+def style(node, rules) -> None:
+    node.style = {}
+
+    # apply styles of inherrited style
+    for prop, default_value in INHERITED_PROPERTIES.items():
+        if node.parent:
+            node.style[prop] = node.parent.style[prop]
+        else:
+            node.style[prop] = default_value
+
+    # apply properties and values to node styling
+    for selector, body in rules:
+        if not selector.matches(node): continue
+        for prop, val in body.items():
+            node.style[prop] = val
+
+    # checks if node is an element, and if its in style attribute
+    if isinstance(node, Element) and "style" in node.attributes:
+        pairs = CSSParser(node.attributes["style"]).body()
+        for prop, val in pairs.items():
+            node.style[prop] = val
+
+    # deal with special cases (eg. % size from parent)
+    if node.style["font-size"].endswith("%"):
+        if node.parent:
+            parent_font_size = node.parent.style["font-size"]
+        else:
+            parent_font_size = INHERITED_PROPERTIES["font-size"]
+        node_pct = float(node.style["font-size"][:-1]) / 100
+        parent_px = float(parent_font_size[:-2])
+        node.style["font-size"] = str(node_pct * parent_px) + "px"
+            
+    for child in node.children:
+        style(child, rules)
 
 # needs alternate text alignment
-def paint_tree(layout_object, display_list):
+def paint_tree(layout_object, display_list) -> None:
     display_list.extend(layout_object.paint())
 
     for child in layout_object.children:
@@ -27,7 +84,7 @@ class Browser:
         window.geometry("%dx%d" % (0, 0))
         window.after(0, lambda: window.state("zoomed"))
 
-        self.canvas = tkinter.Canvas(window)
+        self.canvas = tkinter.Canvas(window, bg="white")
 
         self.canvas.pack(fill="both", expand=True)
         
@@ -72,26 +129,39 @@ class Browser:
             command.execute(self.scroll, self.canvas)
  
     def load(self, url):
+        # checks if provided file is a CSS file
+        def isStylesheet(node) -> bool:
+            return (
+                isinstance(node, Element)
+                and node.tag == "link"
+                and node.attributes.get("link") == "stylesheet"
+                and "href" in node.attributes
+            )
+
         body, self.tag = url.requests()
         self.nodes = HTMLParser(body).parse(self.tag)    
-        style(self.nodes)
+        rules = CSS_SHEET.copy()
+
+        links = [
+            node.attributes["href"] 
+            for node in treeToList(self.nodes, [])
+            if isStylesheet(node)
+            ]
+        
+        for link in links:
+            stylesheetURL = url.resolve(link)
+            try:
+                body = stylesheetURL.request()
+            except:
+                continue # unexpected errors, do not crash program
+            rules.extend(CSSParser(body).parse())
+
+        style(self.nodes, sorted(rules, key=cascade_priority))
         self.document = DocumentLayout(self.nodes)
         self.document.layout()
         self.display_list = []
         paint_tree(self.document, self.display_list)
         self.draw()
-
-# css styling of node
-def style(node):
-    node.style = {}
-    # checks if node is an element, and if its in style attribute
-    if isinstance(node, Element) and "style" in node.attributes:
-        pairs = CSSParser(node.attributes["style"]).body()
-        for prop, val in pairs.items():
-            node.style[prop] = val
-            
-    for child in node.children:
-        style(child)
         
 # debug for tree structure
 def print_tree(node, indent=0):

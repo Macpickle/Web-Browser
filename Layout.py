@@ -1,5 +1,4 @@
 from HTMl_Tags import Element, Text
-from CSSParser import CSSParser
 import Draw
 import tkinter.font
 import globals
@@ -38,14 +37,6 @@ class Layout:
         self.width = None
         self.height = None
         self.displayList = []
-
-        # font variance
-        self.cursor_x = 0
-        self.cursor_y = 0
-        self.weight = "normal"
-        self.style = "roman"
-        self.size = 16
-        self.centered = False
 
         # tags
         self.italics = TagFlipper("italic", "roman")
@@ -116,22 +107,27 @@ class Layout:
             return "block"
 
     # gets spacing for each word, depending on size and location
-    def word(self, word) -> None:
-        font = self.getFonts(self.size, self.weight, self.style)
+    def word(self, node, word) -> None:
+        weight = node.style["font-weight"]
+        style = node.style["font-style"]
+        if style == "normal": style = "roman"
+        size = int(float(node.style["font-size"][:-2]) * .75)
+        font = self.getFonts(size, weight, style)
         w = font.measure(word)
         # need to fix later, width not reaching end unless this formula \/
         if self.cursor_x + w > self.width: 
             self.flush()
 
-        self.line.append((self.cursor_x, word, font))
+        color = node.style["color"]
+        self.line.append((self.cursor_x, word, font, color))
         self.cursor_x += w + font.measure(" ")
 
     # gets fonts from tkinter
     def getFonts(self, size, weight, style) -> tkinter.font:
         key = (size, weight, style)
-    
+
         if key not in self.fonts:
-            font = tkinter.font.Font(size=size, weight=weight,slant=style) # create a font
+            font = tkinter.font.Font(size=size, weight=weight, slant=style) # create a font
             label = tkinter.Label(font=font)
             self.fonts[key] = (font, label)
 
@@ -140,17 +136,17 @@ class Layout:
     # lines up text properly
     def flush(self) -> None:
         if not self.line: return
-        metrics = [font.metrics() for x, word, font in self.line]
+        metrics = [font.metrics() for x, word, font, color in self.line]
 
         # place cursor 1.25 times past point for gaps
         max_ascent = max([metric["ascent"] for metric in metrics])
         baseline = self.cursor_y + 1.25 * max_ascent
 
         # add the new values to the list
-        for rel_x, word, font in self.line:
+        for rel_x, word, font, color  in self.line:
             x = self.x + rel_x
             y = self.y + baseline - font.metrics("ascent")
-            self.displayList.append((x, y, word, font))
+            self.displayList.append((x, y, word, font, color))
 
         self.cursor_x = 0
         self.line = []
@@ -200,17 +196,20 @@ class Layout:
             self.cursor_x = globals.HSTEP
             self.cursor_y += globals.VSTEP
       
-    def recurse(self, tree):
-        if isinstance(tree, Text):
-            for word in tree.text.split():
-                self.word(word)
+    def recurse(self, node):
+        if isinstance(node, Text):
+            for word in node.text.split():
+                self.word(node, word)
 
         else:
-            self.swapTag(tree.tag)
-            for child in tree.children:
-                self.recurse(child)
+            if node.tag in ["i", "sup", "abbr", "b", "small", "big", "center", "br", "p", "h1", "pre"]:
+                self.swapTag(node.tag)
 
-            self.swapTag(tree.tag)
+            if node.tag == "br":
+                self.flush()
+            
+            for child in node.children:
+                self.recurse(child)
 
     def paint(self):
         commands = []
@@ -222,7 +221,7 @@ class Layout:
             commands.append(rect)
 
         if self.layout_mode() == "inline":
-            for x, y, word, font in self.displayList:
-                commands.append(Draw.DrawText(x, y, word, font))
+            for x, y, word, font, color in self.displayList:
+                commands.append(Draw.DrawText(x, y, word, font, color))
 
         return commands
