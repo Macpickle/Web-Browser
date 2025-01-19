@@ -1,5 +1,6 @@
 from Text import Text
 from Element import Element
+from CSSParser import CSSParser
 import Draw
 import tkinter.font
 import globals
@@ -214,10 +215,11 @@ class Layout:
 
     def paint(self):
         commands = []
+        backgroundColour = self.node.style.get("background-color", "transparent")
 
-        if isinstance(self.node, Element) and self.node.tag == "pre":
+        if backgroundColour != "transparent":
             x2, y2 = self.x + self.width, self.y + self.height
-            rect = Draw.DrawRectangle(self.x, self.y, x2, y2, "gray")
+            rect = Draw.DrawRectangle(self.x, self.y, x2, y2, backgroundColour)
             commands.append(rect)
 
         if self.layout_mode() == "inline":
@@ -225,4 +227,3 @@ class Layout:
                 commands.append(Draw.DrawText(x, y, word, font))
 
         return commands
-            

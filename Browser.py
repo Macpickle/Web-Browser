@@ -7,6 +7,7 @@ from Element import Element
 from DocumentLayout import DocumentLayout
 from Layout import Layout
 from HTMLParser import HTMLParser
+from CSSParser import CSSParser
 
 import globals
 
@@ -32,7 +33,7 @@ class Browser:
         self.canvas.pack(fill="both", expand=True)
         
         window.update_idletasks()
-        screen_width = window.winfo_screenwidth()
+        screen_width = window.winfo_screenwidth() * 1.25
         screen_height = window.winfo_screenheight()
         globals.update_globals(screen_width, screen_height)
 
@@ -74,14 +75,28 @@ class Browser:
     def load(self, url):
         body, self.tag = url.requests()
         self.nodes = HTMLParser(body).parse(self.tag)    
+        style(self.nodes)
         self.document = DocumentLayout(self.nodes)
         self.document.layout()
         self.display_list = []
         paint_tree(self.document, self.display_list)
         self.draw()
+
+# css styling of node
+def style(node):
+    node.style = {}
+    # checks if node is an element, and if its in style attribute
+    if isinstance(node, Element) and "style" in node.attributes:
+        pairs = CSSParser(node.attributes["style"]).body()
+        for prop, val in pairs.items():
+            node.style[prop] = val
+            
+    for child in node.children:
+        style(child)
         
 # debug for tree structure
 def print_tree(node, indent=0):
     print(" " * indent, node)
     for child in node.children:
         print_tree(child, indent + 2)
+
