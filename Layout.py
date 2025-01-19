@@ -1,5 +1,4 @@
-from Text import Text
-from Element import Element
+from HTMl_Tags import Element, Text
 from CSSParser import CSSParser
 import Draw
 import tkinter.font

@@ -5,6 +5,7 @@ import gzip
 from checkEntity import checkEntity
 #needs caching
 
+# recieves a URL and returns the body of the page in HTML
 class URL:
     def __init__(self, url) -> None:
         self.schemes = {

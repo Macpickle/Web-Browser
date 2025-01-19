@@ -1,10 +1,9 @@
 class DrawText:
     def __init__(self, x1, y1, text, font):
         self.x1 = x1
-        self.y1 = y1
+        self.y1 = y1 + font.metrics("linespace")
         self.text = text
         self.font = font
-        self.y1 = y1 + font.metrics("linespace")
 
     def execute(self, scroll, canvas):
         canvas.create_text(

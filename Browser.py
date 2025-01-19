@@ -2,8 +2,7 @@ import customtkinter
 import tkinter
 import tkinter.font
 from checkEntity import checkEntity
-from Text import Text
-from Element import Element
+from HTMl_Tags import Element
 from DocumentLayout import DocumentLayout
 from Layout import Layout
 from HTMLParser import HTMLParser

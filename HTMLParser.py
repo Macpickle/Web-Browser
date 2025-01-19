@@ -1,5 +1,4 @@
-from Text import Text
-from Element import Element
+from HTMl_Tags import Element, Text
 from checkEntity import checkEntity
 from URL import URL
 
@@ -14,7 +13,6 @@ class HTMLParser:
     # parse body of html 
     def parse(self, scheme):
         text = "" # contains current text (not in a tag)
-        attribute_text = "" # contains current attribute text
         inTag = False # Flag to track if inside a tag
         inScriptTag = False # Flag to track if inside a <script> tag
 

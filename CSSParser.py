@@ -1,5 +1,3 @@
-from Element import Element
-
 class CSSParser:
     def __init__(self, s):
         self.s = s
