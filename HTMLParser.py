@@ -2,12 +2,16 @@ from HTMl_Tags import Element, Text
 from checkEntity import checkEntity
 from URL import URL
 
+HEAD_TAGS = [
+        "base", "basefont", "bgsound", "noscript",
+        "link", "meta", "title", "style", "script",
+]
+
 class HTMLParser:
     def __init__(self, body) -> None:
         self.body = body
         self.unfinished = []
         self.selfClosing = [ "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr", ] # tags that dont require a closing tag
-        self.headTags = [ "base", "basefont", "bgsound", "noscript", "link", "meta", "title", "style", "script"] # tags that are only allowed in the head tag
         self.in_style_tag = False  # Flag to track if inside a <style> tag
 
     # parse body of html 
@@ -19,7 +23,7 @@ class HTMLParser:
         # special case for view-source
         if scheme == "view-source": 
             return Text(self.body, None)
-        
+
         for char in self.body:
             if char == "<":
                 inTag = True
@@ -36,6 +40,7 @@ class HTMLParser:
 
         if not inTag and not inScriptTag and text:
             self.addText(checkEntity(text))
+
         return self.finish()
     
         # gets attributes of text
@@ -46,11 +51,13 @@ class HTMLParser:
         for part in textParts[1:]:
             if "=" in part:
                 key, value = part.split("=",1)
-                attributes[key.casefold()] = value.strip("\"'")
+                if len(value) > 2 and value[0] in ["'", "\""]:
+                    value = value[1:-1]
+                attributes[key.casefold()] = value
 
             else:
-                attributes[part.casefold()] = None
-                
+                attributes[part.casefold()] = ""
+            
         return tag, attributes
     
     # checks for header tags if they are not present
@@ -62,13 +69,13 @@ class HTMLParser:
                 self.addTag("html")
 
             elif tag == ["html"] and tag not in ["head", "body", "/html"]:
-                if tag in self.headTags:
+                if tag in HEAD_TAGS:
                     self.addTag("head")
 
                 else:
                     self.addTag("body")
 
-            elif openTags == ["html", "head"] and tag not in ["/head"] + self.headTags:
+            elif openTags == ["html", "head"] and tag not in ["/head"] + HEAD_TAGS:
                 self.addTag("/head")
 
             else:
@@ -118,6 +125,7 @@ class HTMLParser:
             node = self.unfinished.pop()
             parent = self.unfinished[-1]
             parent.children.append(node)
+
         return self.unfinished.pop()
 
     # debug print

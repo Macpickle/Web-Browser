@@ -139,21 +139,26 @@ class Browser:
             )
 
         body, self.tag = url.requests()
-        self.nodes = HTMLParser(body).parse(self.tag)    
+        self.nodes = HTMLParser(body).parse(self.tag)   
+
         rules = CSS_SHEET.copy()
 
-        links = [
-            node.attributes["href"] 
-            for node in treeToList(self.nodes, [])
-            if isStylesheet(node)
+        links = [node.attributes["href"]
+                for node in treeToList(self.nodes, [])
+                if isinstance(node, Element)
+                and node.tag == "link"
+                and node.attributes.get("rel") == "stylesheet"
+                and "href" in node.attributes
             ]
-        
+    
         for link in links:
             stylesheetURL = url.resolve(link)
+
             try:
-                body = stylesheetURL.request()
+                body = stylesheetURL.requests()
             except:
                 continue # unexpected errors, do not crash program
+            
             rules.extend(CSSParser(body).parse())
 
         style(self.nodes, sorted(rules, key=cascade_priority))

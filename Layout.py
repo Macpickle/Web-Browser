@@ -13,6 +13,18 @@ BLOCK_ELEMENTS = [
     "legend", "details", "summary"
 ]
 
+FONTS = {}
+
+def getFonts(size, weight, style):
+    key = (size, weight, style)
+
+    if key not in FONTS:
+        font = tkinter.font.Font(size=size, weight=weight, slant=style)
+        label = tkinter.Label(font=font)
+        FONTS[key] = (font, label)
+
+    return FONTS[key][0]
+
 # flips state of tags to open/close each
 class TagFlipper:
     def __init__(self, value1, value2):
@@ -48,9 +60,6 @@ class Layout:
         self.center = TagFlipper(True, False)
         self.titleTag = TagFlipper(True, False)
         self.commentTag = TagFlipper(True, False)
-        
-        # stores fonts
-        self.fonts = {}
 
     # advanced layout
     def layout(self) -> None:
@@ -63,7 +72,6 @@ class Layout:
             self.y = self.parent.y
 
         mode = self.layout_mode()
-
         if mode == "block":
             # intermediate
             previous = None
@@ -96,7 +104,6 @@ class Layout:
     def layout_mode(self):
         if isinstance(self.node, Text):
             return "inline"
-        
         elif any([isinstance(child, Element) and \
                   child.tag in BLOCK_ELEMENTS
                   for child in self.node.children]):
@@ -112,7 +119,7 @@ class Layout:
         style = node.style["font-style"]
         if style == "normal": style = "roman"
         size = int(float(node.style["font-size"][:-2]) * .75)
-        font = self.getFonts(size, weight, style)
+        font = getFonts(size, weight, style)
         w = font.measure(word)
         # need to fix later, width not reaching end unless this formula \/
         if self.cursor_x + w > self.width: 
@@ -122,17 +129,6 @@ class Layout:
         self.line.append((self.cursor_x, word, font, color))
         self.cursor_x += w + font.measure(" ")
 
-    # gets fonts from tkinter
-    def getFonts(self, size, weight, style) -> tkinter.font:
-        key = (size, weight, style)
-
-        if key not in self.fonts:
-            font = tkinter.font.Font(size=size, weight=weight, slant=style) # create a font
-            label = tkinter.Label(font=font)
-            self.fonts[key] = (font, label)
-
-        return self.fonts[key][0]
-    
     # lines up text properly
     def flush(self) -> None:
         if not self.line: return
@@ -143,7 +139,7 @@ class Layout:
         baseline = self.cursor_y + 1.25 * max_ascent
 
         # add the new values to the list
-        for rel_x, word, font, color  in self.line:
+        for rel_x, word, font, color in self.line:
             x = self.x + rel_x
             y = self.y + baseline - font.metrics("ascent")
             self.displayList.append((x, y, word, font, color))
@@ -154,6 +150,21 @@ class Layout:
         # return the spacing
         max_descent = max([metric["descent"] for metric in metrics])
         self.cursor_y = baseline + 1.25 * max_descent
+
+    def recurse(self, node):
+        if isinstance(node, Text):
+            for word in node.text.split():
+                self.word(node, word)
+
+        else:
+            if node.tag in ["i", "sup", "abbr", "b", "small", "big", "center", "br", "p", "h1", "pre"]:
+                self.swapTag(node.tag)
+
+            if node.tag == "br":
+                self.flush()
+            
+            for child in node.children:
+                self.recurse(child)
 
     def swapTag(self, tag):
         if tag == "i":
@@ -195,21 +206,6 @@ class Layout:
             self.flush()
             self.cursor_x = globals.HSTEP
             self.cursor_y += globals.VSTEP
-      
-    def recurse(self, node):
-        if isinstance(node, Text):
-            for word in node.text.split():
-                self.word(node, word)
-
-        else:
-            if node.tag in ["i", "sup", "abbr", "b", "small", "big", "center", "br", "p", "h1", "pre"]:
-                self.swapTag(node.tag)
-
-            if node.tag == "br":
-                self.flush()
-            
-            for child in node.children:
-                self.recurse(child)
 
     def paint(self):
         commands = []

@@ -85,6 +85,7 @@ class CSSParser:
             descendant = TagSelector(tag.casefold())
             out = DescendantSelector(out, descendant)
             self.whitespace()
+            
         return out
     
     # parses CSS files
@@ -101,13 +102,12 @@ class CSSParser:
                 self.literal("}")
                 rules.append((selector, body)) # append to rules
 
-            except:
+            except Exception:
                 # parser error
-                reason = self.ignore_until(["}"])
+                reason = self.ignore(["}"])
                 if reason == "}":
                     self.literal("}")
                     self.whitespace()
                 else:
                     break
-                    
         return rules
