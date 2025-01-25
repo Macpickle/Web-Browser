@@ -110,4 +110,5 @@ class CSSParser:
                     self.whitespace()
                 else:
                     break
+
         return rules

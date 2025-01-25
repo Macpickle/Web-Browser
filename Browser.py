@@ -32,7 +32,7 @@ def treeToList(tree, list) -> list:
     return list
 
 # css styling of node
-def style(node, rules) -> None:
+def style(node, rules):
     node.style = {}
 
     # apply styles of inherrited style
@@ -129,15 +129,6 @@ class Browser:
             command.execute(self.scroll, self.canvas)
  
     def load(self, url):
-        # checks if provided file is a CSS file
-        def isStylesheet(node) -> bool:
-            return (
-                isinstance(node, Element)
-                and node.tag == "link"
-                and node.attributes.get("link") == "stylesheet"
-                and "href" in node.attributes
-            )
-
         body, self.tag = url.requests()
         self.nodes = HTMLParser(body).parse(self.tag)   
 
@@ -155,10 +146,11 @@ class Browser:
             stylesheetURL = url.resolve(link)
 
             try:
-                body = stylesheetURL.requests()
+                body, _ = stylesheetURL.requests()
+
             except:
                 continue # unexpected errors, do not crash program
-            
+
             rules.extend(CSSParser(body).parse())
 
         style(self.nodes, sorted(rules, key=cascade_priority))
