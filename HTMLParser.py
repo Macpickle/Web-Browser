@@ -2,8 +2,8 @@ from HTMl_Tags import Element, Text
 from utils.checkEntity import checkEntity
 
 HEAD_TAGS = [
-        "base", "basefont", "bgsound", "noscript",
-        "link", "meta", "title", "style", "script",
+    "base", "basefont", "bgsound", "noscript",
+    "link", "meta", "title", "style", "script",
 ]
 
 class HTMLParser:

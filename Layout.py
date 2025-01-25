@@ -171,13 +171,14 @@ class Layout:
             self.newLine()
             self.cursor_x = globals.HSTEP
 
+    def self_rect(self):
+        return Draw.Rect(self.x, self.y, self.x + self.width, self.y + self.height)
+
     def paint(self):
         commands = []
         backgroundColour = self.node.style.get("background-color", "transparent")
 
         if backgroundColour != "transparent":
-            x2, y2 = self.x + self.width, self.y + self.height
-            rect = Draw.DrawRectangle(self.x, self.y, x2, y2, backgroundColour)
+            rect = Draw.DrawRectangle(self.self_rect(), commands)
             commands.append(rect)
-
         return commands

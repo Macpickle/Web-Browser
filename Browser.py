@@ -1,39 +1,15 @@
 import customtkinter
 import tkinter
-import tkinter.font
-from utils.checkEntity import checkEntity
-from HTMl_Tags import Element, Text
-from DocumentLayout import DocumentLayout
-from HTMLParser import HTMLParser
-from CSSParser import CSSParser
-from utils.style import style
-
+from Tab import Tab
+from Chrome import Chrome
 import globals
-CSS_SHEET = CSSParser(open("browser.css").read()).parse() # read and open CSS files 
-
-# ranks each rule by priority
-def cascade_priority(rule) -> int:
-    selector, body = rule
-    return selector.priority
-
-# converts a tree into a list nodes
-def treeToList(tree, list) -> list:
-    list.append(tree)
-
-    for child in tree.children:
-        treeToList(child, list)
-
-    return list
-
-# needs alternate text alignment
-def paint_tree(layout_object, display_list) -> None:
-    display_list.extend(layout_object.paint())
-
-    for child in layout_object.children:
-        paint_tree(child, display_list)
 
 class Browser:
-    def __init__(self, tags) -> None:
+    def __init__(self, tags):
+        self.tags = tags
+        self.tabs = []
+        self.active_tab = None
+
         #window settings
         window = customtkinter.CTk()
         self.textalignTag = tags[0] if tags else ""
@@ -58,96 +34,41 @@ class Browser:
 
         # store urls
         self.url = None
+        self.chrome = Chrome(self)
 
-        window.bind("<MouseWheel>", self.scroll_window)
-        window.bind("<Up>", self.scroll_window)
-        window.bind("<Down>", self.scroll_window)
+
+        window.bind("<MouseWheel>", self.handle_down)
+        window.bind("<Up>", self.handle_down)
+        window.bind("<Down>", self.handle_down)
         window.bind("<Configure>", self.resize)
-        window.bind("<Button-1>", self.click)
+        window.bind("<Button-1>", self.handle_click)
+        
+    def draw(self):
+        self.canvas.delete("all")
+        self.active_tab.draw(self.canvas, self.chrome.bottom)
 
-    # window manipulation functions
-    def scroll_window(self, e):
-        if e.keysym == "Up":
-            new_scroll = self.scroll - self.SCROLL_STEP
-        elif e.keysym == "Down":
-            new_scroll = self.scroll + self.SCROLL_STEP
-        else:
-            new_scroll = self.scroll - e.delta / 120 * self.SCROLL_STEP
-            max_scroll = max(command.y1 for command in self.display_list) - globals.SCheight
-            self.scroll = max(0, min(new_scroll, max_scroll))
-            self.draw()
-
-    def click(self, e):
-        x, y = e.x, e.y
-        y += self.scroll 
-
-        objs = [obj for obj in treeToList(self.document, [])
-        if obj.x <= x < obj.x + obj.width
-        and obj.y <= y < obj.y + obj.height]
-
-        if not objs: return
-        elt = objs[-1].node
-
-        while elt:
-            if isinstance(elt, Text):
-                pass
-            elif elt.tag == "a" and "href" in elt.attributes:
-                self.scroll = 0 # reset scroll
-                url = self.url.resolve(elt.attributes["href"])
-                return self.load(url)
-
-            elt = elt.parent
+        for command in self.chrome.paint():
+            command.execute(0, self.canvas)
 
     def resize(self, e):
         globals.update_globals(e.width, e.height)
         self.draw()
 
-    def draw(self):
-        self.canvas.delete("all")
-
-        #places object on canvas
-        for command in self.display_list:
-            if command.x1 > self.scroll + globals.SCheight: continue
-            if command.y1 < self.scroll: continue
-            command.execute(self.scroll, self.canvas)
- 
-    def load(self, url):
-        body, self.tag = url.requests()
-        self.url = url
-
-        self.nodes = HTMLParser(body).parse(self.tag)   
-
-        rules = CSS_SHEET.copy()
-
-        links = [node.attributes["href"]
-                for node in treeToList(self.nodes, [])
-                if isinstance(node, Element)
-                and node.tag == "link"
-                and node.attributes.get("rel") == "stylesheet"
-                and "href" in node.attributes
-            ]
-    
-        for link in links:
-            stylesheetURL = url.resolve(link)
-
-            try:
-                body, _ = stylesheetURL.requests()
-
-            except:
-                continue # unexpected errors, do not crash program
-
-            rules.extend(CSSParser(body).parse())
-
-        style(self.nodes, sorted(rules, key=cascade_priority))
-        self.document = DocumentLayout(self.nodes)
-        self.document.layout()
-        self.display_list = []
-        paint_tree(self.document, self.display_list)
+    def new_tab(self, url):
+        new_tab = Tab(globals.SCheight - self.chrome.bottom)
+        new_tab.load(url)
+        self.active_tab = new_tab
+        self.tabs.append(new_tab)
         self.draw()
-        
-# debug for tree structure
-def print_tree(node, indent=0):
-    print(" " * indent, node)
-    for child in node.children:
-        print_tree(child, indent + 2)
 
+    def handle_down(self, e):
+        self.active_tab.scroll_window(e)
+        self.draw()
+
+    def handle_click(self, e):
+        if e.y < self.chrome.bottom:
+            self.chrome.click(e.x, e.y)
+        else:
+            tab_y = e.y - self.chrome.bottom
+            self.active_tab.click(e.x, tab_y)
+        self.draw()
