@@ -15,6 +15,7 @@ INHERITED_PROPERTIES = {
     "font-style": "normal",
     "font-weight": "normal",
     "color": "black",
+    "font-family": "Arial, sans-serif",
 }
 
 # ranks each rule by priority
@@ -35,7 +36,7 @@ def treeToList(tree, list) -> list:
 def style(node, rules):
     node.style = {}
 
-    # apply styles of inherrited style
+    # apply styles of inherited style
     for prop, default_value in INHERITED_PROPERTIES.items():
         if node.parent:
             node.style[prop] = node.parent.style[prop]
@@ -63,6 +64,10 @@ def style(node, rules):
         node_pct = float(node.style["font-size"][:-1]) / 100
         parent_px = float(parent_font_size[:-2])
         node.style["font-size"] = str(node_pct * parent_px) + "px"
+
+    # Ensure <code> elements use a monospaced font
+    if isinstance(node, Element) and node.tag == "code":
+        node.style["font-family"] = "Courier, monospace"
             
     for child in node.children:
         style(child, rules)

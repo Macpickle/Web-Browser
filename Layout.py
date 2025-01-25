@@ -1,6 +1,6 @@
-from HTMl_Tags import Element, Text
+from HTMl_Tags import Element, Text, TextLayout, LineLayout
+from utils.getFonts import getFonts
 import Draw
-import tkinter.font
 import globals
 
 # globals
@@ -12,18 +12,6 @@ BLOCK_ELEMENTS = [
     "figcaption", "main", "div", "table", "form", "fieldset",
     "legend", "details", "summary"
 ]
-
-FONTS = {}
-
-def getFonts(size, weight, style):
-    key = (size, weight, style)
-
-    if key not in FONTS:
-        font = tkinter.font.Font(size=size, weight=weight, slant=style)
-        label = tkinter.Label(font=font)
-        FONTS[key] = (font, label)
-
-    return FONTS[key][0]
 
 # flips state of tags to open/close each
 class TagFlipper:
@@ -48,7 +36,6 @@ class Layout:
         self.y = None
         self.width = None
         self.height = None
-        self.displayList = []
 
         # tags
         self.italics = TagFlipper("italic", "roman")
@@ -82,25 +69,14 @@ class Layout:
                 previous = next
 
         else:
-            self.cursor_x = 0
-            self.cursor_y = 0
-            self.weight = "normal"
-            self.style = "roman"
-            self.size = 12
-
-            self.line = []
+            self.newLine()
             self.recurse(self.node)
-            self.flush()
 
         for child in self.children:
             child.layout()
 
-        if mode == "block":
-            self.height = sum([
-                child.height for child in self.children])
-        else:
-            self.height = self.cursor_y
-        
+        self.height = sum([child.height for child in self.children])
+
     def layout_mode(self):
         if isinstance(self.node, Text):
             return "inline"
@@ -112,6 +88,13 @@ class Layout:
             return "inline"
         else:
             return "block"
+        
+    # make new line
+    def newLine(self):
+        self.cursor_x = 0
+        lastLine = self.children[-1] if self.children else None
+        newLine = LineLayout(self.node, self, lastLine)
+        self.children.append(newLine)
 
     # gets spacing for each word, depending on size and location
     def word(self, node, word) -> None:
@@ -120,13 +103,16 @@ class Layout:
         if style == "normal": style = "roman"
         size = int(float(node.style["font-size"][:-2]) * .75)
         font = getFonts(size, weight, style)
+        
         w = font.measure(word)
         # need to fix later, width not reaching end unless this formula \/
         if self.cursor_x + w > self.width: 
-            self.flush()
+            self.newLine()
 
-        color = node.style["color"]
-        self.line.append((self.cursor_x, word, font, color))
+        line = self.children[-1]
+        prevWord = line.children[-1] if line.children else None
+        text = TextLayout(node, word, line, prevWord)
+        line.children.append(text)
         self.cursor_x += w + font.measure(" ")
 
     # lines up text properly
@@ -161,7 +147,7 @@ class Layout:
                 self.swapTag(node.tag)
 
             if node.tag == "br":
-                self.flush()
+                self.newLine()
             
             for child in node.children:
                 self.recurse(child)
@@ -189,23 +175,22 @@ class Layout:
             self.centered = self.center.flip()
 
         elif tag == "br":
-            self.flush()
+            self.newLine()
             
         elif tag == "p":
-            self.flush()
-            self.cursor_y += globals.VSTEP
+            self.newLine()
+            self.cursor_x += globals.VSTEP
 
         elif tag == "h1 class='title" or tag == "h1":
-            self.flush()
+            self.newLine()
             self.titleTag.flip()
 
         elif tag == "<!--" or tag == "-->":
             self.commentTag.flip()
 
         elif tag == "pre":
-            self.flush()
+            self.newLine()
             self.cursor_x = globals.HSTEP
-            self.cursor_y += globals.VSTEP
 
     def paint(self):
         commands = []
@@ -215,9 +200,5 @@ class Layout:
             x2, y2 = self.x + self.width, self.y + self.height
             rect = Draw.DrawRectangle(self.x, self.y, x2, y2, backgroundColour)
             commands.append(rect)
-
-        if self.layout_mode() == "inline":
-            for x, y, word, font, color in self.displayList:
-                commands.append(Draw.DrawText(x, y, word, font, color))
 
         return commands
