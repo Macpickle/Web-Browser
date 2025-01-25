@@ -1,22 +1,15 @@
 import customtkinter
 import tkinter
 import tkinter.font
-from checkEntity import checkEntity
-from HTMl_Tags import Element
+from utils.checkEntity import checkEntity
+from HTMl_Tags import Element, Text
 from DocumentLayout import DocumentLayout
 from HTMLParser import HTMLParser
 from CSSParser import CSSParser
+from utils.style import style
 
 import globals
 CSS_SHEET = CSSParser(open("browser.css").read()).parse() # read and open CSS files 
-
-INHERITED_PROPERTIES = {
-    "font-size": "16px",
-    "font-style": "normal",
-    "font-weight": "normal",
-    "color": "black",
-    "font-family": "Arial, sans-serif",
-}
 
 # ranks each rule by priority
 def cascade_priority(rule) -> int:
@@ -31,46 +24,6 @@ def treeToList(tree, list) -> list:
         treeToList(child, list)
 
     return list
-
-# css styling of node
-def style(node, rules):
-    node.style = {}
-
-    # apply styles of inherited style
-    for prop, default_value in INHERITED_PROPERTIES.items():
-        if node.parent:
-            node.style[prop] = node.parent.style[prop]
-        else:
-            node.style[prop] = default_value
-
-    # apply properties and values to node styling
-    for selector, body in rules:
-        if not selector.matches(node): continue
-        for prop, val in body.items():
-            node.style[prop] = val
-
-    # checks if node is an element, and if its in style attribute
-    if isinstance(node, Element) and "style" in node.attributes:
-        pairs = CSSParser(node.attributes["style"]).body()
-        for prop, val in pairs.items():
-            node.style[prop] = val
-
-    # deal with special cases (eg. % size from parent)
-    if node.style["font-size"].endswith("%"):
-        if node.parent:
-            parent_font_size = node.parent.style["font-size"]
-        else:
-            parent_font_size = INHERITED_PROPERTIES["font-size"]
-        node_pct = float(node.style["font-size"][:-1]) / 100
-        parent_px = float(parent_font_size[:-2])
-        node.style["font-size"] = str(node_pct * parent_px) + "px"
-
-    # Ensure <code> elements use a monospaced font
-    if isinstance(node, Element) and node.tag == "code":
-        node.style["font-family"] = "Courier, monospace"
-            
-    for child in node.children:
-        style(child, rules)
 
 # needs alternate text alignment
 def paint_tree(layout_object, display_list) -> None:
@@ -94,19 +47,23 @@ class Browser:
         self.canvas.pack(fill="both", expand=True)
         
         window.update_idletasks()
-        screen_width = window.winfo_screenwidth() * 1.25
+        screen_width = window.winfo_screenwidth()
         screen_height = window.winfo_screenheight()
         globals.update_globals(screen_width, screen_height)
 
         # scrolling option
         self.scroll = 0
-        self.lastY = 1
+        self.lastY = 0
         self.SCROLL_STEP = 100
+
+        # store urls
+        self.url = None
 
         window.bind("<MouseWheel>", self.scroll_window)
         window.bind("<Up>", self.scroll_window)
         window.bind("<Down>", self.scroll_window)
         window.bind("<Configure>", self.resize)
+        window.bind("<Button-1>", self.click)
 
     # window manipulation functions
     def scroll_window(self, e):
@@ -119,6 +76,27 @@ class Browser:
             max_scroll = max(command.y1 for command in self.display_list) - globals.SCheight
             self.scroll = max(0, min(new_scroll, max_scroll))
             self.draw()
+
+    def click(self, e):
+        x, y = e.x, e.y
+        y += self.scroll 
+
+        objs = [obj for obj in treeToList(self.document, [])
+        if obj.x <= x < obj.x + obj.width
+        and obj.y <= y < obj.y + obj.height]
+
+        if not objs: return
+        elt = objs[-1].node
+
+        while elt:
+            if isinstance(elt, Text):
+                pass
+            elif elt.tag == "a" and "href" in elt.attributes:
+                self.scroll = 0 # reset scroll
+                url = self.url.resolve(elt.attributes["href"])
+                return self.load(url)
+
+            elt = elt.parent
 
     def resize(self, e):
         globals.update_globals(e.width, e.height)
@@ -135,6 +113,8 @@ class Browser:
  
     def load(self, url):
         body, self.tag = url.requests()
+        self.url = url
+
         self.nodes = HTMLParser(body).parse(self.tag)   
 
         rules = CSS_SHEET.copy()

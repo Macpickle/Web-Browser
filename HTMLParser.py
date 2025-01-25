@@ -1,6 +1,5 @@
 from HTMl_Tags import Element, Text
-from checkEntity import checkEntity
-from URL import URL
+from utils.checkEntity import checkEntity
 
 HEAD_TAGS = [
         "base", "basefont", "bgsound", "noscript",

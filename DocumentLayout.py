@@ -7,6 +7,7 @@ class DocumentLayout:
         self.parent = None
         self.previous = None
         self.children = []
+        self.height = 0
 
     def layout(self):
         child = Layout(self.node, self, None)

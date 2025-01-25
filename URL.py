@@ -2,7 +2,7 @@ import socket
 import ssl
 import gzip
 
-from checkEntity import checkEntity
+from utils.checkEntity import checkEntity
 #needs caching
 
 # recieves a URL and returns the body of the page in HTML

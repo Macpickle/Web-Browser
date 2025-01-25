@@ -9,7 +9,7 @@ class DrawText:
     def execute(self, scroll, canvas):
         canvas.create_text(
             self.x1, 
-            self.y1 - scroll,
+            self.y1 - scroll - self.font.metrics("linespace"),
             text = self.text,
             font = self.font,
             fill = self.color,
