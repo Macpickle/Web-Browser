@@ -9,50 +9,26 @@ class Browser:
         self.tags = tags
         self.tabs = []
         self.active_tab = None
-
-        #window settings
-        window = customtkinter.CTk()
-        self.textalignTag = tags[0] if tags else ""
-
-        # fullscreen with title bar
-        window.geometry("%dx%d" % (0, 0))
-        window.after(0, lambda: window.state("zoomed"))
-
-        self.canvas = tkinter.Canvas(window, bg="white")
-
-        self.canvas.pack(fill="both", expand=True)
-        
-        window.update_idletasks()
-        screen_width = window.winfo_screenwidth()
-        screen_height = window.winfo_screenheight()
-        globals.update_globals(screen_width, screen_height)
-
-        # scrolling option
-        self.scroll = 0
-        self.lastY = 0
-        self.SCROLL_STEP = 100
-
-        # store urls
-        self.url = None
+        self.initialize()
         self.chrome = Chrome(self)
 
-
-        window.bind("<MouseWheel>", self.handle_down)
-        window.bind("<Up>", self.handle_down)
-        window.bind("<Down>", self.handle_down)
-        window.bind("<Configure>", self.resize)
-        window.bind("<Button-1>", self.handle_click)
+        self.window.bind("<MouseWheel>", self.handle_scroll)
+        self.window.bind("<Configure>", lambda e: self.draw())
+        self.window.bind("<Button-1>", self.handle_click)
+        self.window.bind("<Key>", self.handle_key)
+        self.window.bind("<Return>", self.handle_enter)
         
-    def draw(self):
-        self.canvas.delete("all")
-        self.active_tab.draw(self.canvas, self.chrome.bottom)
-
-        for command in self.chrome.paint():
-            command.execute(0, self.canvas)
-
-    def resize(self, e):
-        globals.update_globals(e.width, e.height)
-        self.draw()
+    def initialize(self):
+        self.window = customtkinter.CTk()
+        self.window.geometry("%dx%d" % (1000, 1000))                
+        self.window.after(0, lambda: self.window.state("zoomed"))
+        self.canvas = tkinter.Canvas(self.window, bg="white")
+        self.canvas.pack(fill="both", expand=True)
+        
+        self.window.update_idletasks() 
+        screen_width = self.window.winfo_screenwidth() + 400 # bad fix, but it works
+        screen_height = self.window.winfo_screenheight()
+        globals.update_globals(screen_width, screen_height)
 
     def new_tab(self, url):
         new_tab = Tab(globals.SCheight - self.chrome.bottom)
@@ -61,7 +37,14 @@ class Browser:
         self.tabs.append(new_tab)
         self.draw()
 
-    def handle_down(self, e):
+    def draw(self):
+        self.canvas.delete("all")
+        self.active_tab.draw(self.canvas, self.chrome.bottom)
+
+        for command in self.chrome.paint():
+            command.execute(0, self.canvas)
+
+    def handle_scroll(self, e):
         self.active_tab.scroll_window(e)
         self.draw()
 
@@ -71,4 +54,18 @@ class Browser:
         else:
             tab_y = e.y - self.chrome.bottom
             self.active_tab.click(e.x, tab_y)
+        self.draw()
+
+    def handle_key(self, e):
+        self.chrome.keypress(e.char)
+        self.draw()
+
+    def handle_key(self, e):
+        if len(e.char) == 0: return
+        if not (0x20 <= ord(e.char) < 0x7f): return
+        self.chrome.keypress(e.char)
+        self.draw()
+
+    def handle_enter(self, e):
+        self.chrome.enter()
         self.draw()

@@ -114,7 +114,29 @@ class Layout:
         text = TextLayout(node, word, line, prevWord)
         line.children.append(text)
         self.cursor_x += w + font.measure(" ")
-        
+
+    # lines up text properly
+    def flush(self) -> None:
+        if not self.line: return
+        metrics = [font.metrics() for x, word, font, color in self.line]
+
+        # place cursor 1.25 times past point for gaps
+        max_ascent = max([metric["ascent"] for metric in metrics])
+        baseline = self.cursor_y + 1.25 * max_ascent
+
+        # add the new values to the list
+        for rel_x, word, font, color in self.line:
+            x = self.x + rel_x
+            y = self.y + baseline - font.metrics("ascent")
+            self.displayList.append((x, y, word, font, color))
+
+        self.cursor_x = 0
+        self.line = []
+
+        # return the spacing
+        max_descent = max([metric["descent"] for metric in metrics])
+        self.cursor_y = baseline + 1.25 * max_descent
+
     def recurse(self, node):
         if isinstance(node, Text):
             for word in node.text.split():
@@ -159,11 +181,10 @@ class Layout:
             self.newLine()
             self.cursor_x += globals.VSTEP
 
-        elif tag == "h1":
-            self.titleTag.flip()
+        elif tag == "h1 class='title" or tag == "h1":
             self.newLine()
-            self.cursor_x = globals.HSTEP
-            
+            self.titleTag.flip()
+
         elif tag == "<!--" or tag == "-->":
             self.commentTag.flip()
 
@@ -171,14 +192,13 @@ class Layout:
             self.newLine()
             self.cursor_x = globals.HSTEP
 
-    def self_rect(self):
-        return Draw.Rect(self.x, self.y, self.x + self.width, self.y + self.height)
-
     def paint(self):
         commands = []
         backgroundColour = self.node.style.get("background-color", "transparent")
 
         if backgroundColour != "transparent":
-            rect = Draw.DrawRectangle(self.self_rect(), commands)
+            x2, y2 = self.x + self.width, self.y + self.height
+            rect = Draw.DrawRectangle(Draw.Rect(self.x, self.y, x2, y2), backgroundColour)
             commands.append(rect)
+
         return commands

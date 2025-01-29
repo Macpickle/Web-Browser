@@ -33,6 +33,7 @@ class Tab:
         # scrolling option
         self.scroll = 0
         self.lastY = 0
+        self.history = []
         self.tabHeight = tabHeight
 
         # store urls
@@ -77,6 +78,7 @@ class Tab:
                     raise
  
     def load(self, url):
+        self.history.append(url)
         body, self.tag = url.requests()
         self.url = url
         self.scroll = 0
@@ -109,6 +111,12 @@ class Tab:
         self.document.layout()
         self.display_list = []
         paint_tree(self.document, self.display_list)
+
+    def go_back(self):
+        if len(self.history) > 1:
+            self.history.pop()
+            back = self.history.pop()
+            self.load(back)
         
 # debug for tree structure
 def print_tree(node, indent=0):

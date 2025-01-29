@@ -2,6 +2,9 @@ import tkinter.font
 FONTS = {}
 
 def getFonts(size, weight, style):
+    # temp fix, dont know why it sets 400
+    if weight == '400':
+        weight = 'normal'
     key = (size, weight, style)
 
     if key not in FONTS:
