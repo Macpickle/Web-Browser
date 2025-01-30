@@ -17,13 +17,15 @@ class Chrome:
         self.fontHeight = self.font.metrics("linespace")
 
         self.focus = None
+        self.address_bar_text = ""
         self.topPadding = 5
         self.tabbarTop = 0
         self.tabbarBottom = self.fontHeight + 2*self.topPadding
 
         plusWidth = self.font.measure("+") + 2*self.topPadding
         self.newTabRectangle = Draw.Rect(
-           self.topPadding, self.topPadding,
+           self.topPadding, 
+           self.topPadding,
            self.topPadding + plusWidth,
            self.topPadding + self.fontHeight
         )
@@ -34,8 +36,10 @@ class Chrome:
 
         backWidth = self.font.measure("<") + 2 * self.topPadding
         self.backRectangle = Draw.Rect(
-            self.topPadding, self.urlTop + self.topPadding,
-            self.topPadding + backWidth, self.urlBottom - self.topPadding
+            self.topPadding, 
+            self.urlTop + self.topPadding,
+            self.topPadding + backWidth, 
+            self.urlBottom - self.topPadding
         )
 
         self.address_bar = Draw.Rect(
@@ -45,48 +49,46 @@ class Chrome:
             self.urlBottom - self.topPadding
         )
 
-        self.bottom = self.tabbarBottom
+        self.bottom = self.urlBottom
+    def tabRectangle(self, index):
+        tabStart = self.newTabRectangle.right + self.topPadding
+        tabWidth = self.font.measure("XXXXXXXXXXXXXXX") + 2*self.topPadding
+        return Draw.Rect(
+            tabStart + tabWidth * index, self.tabbarTop,
+            tabStart + tabWidth * (index + 1), self.tabbarBottom
+        )
 
     def click(self, x, y):
         self.focus = None
         
         if self.newTabRectangle.contains_point(x, y):
             self.browser.new_tab(URL("https://browser.engineering/"))
-            return
         
         elif self.backRectangle.contains_point(x, y):
             self.browser.active_tab.go_back()
-            return
         
         elif self.address_bar.contains_point(x, y):
             self.focus = "address bar"
-            self.address_bar = ""
-            return
+            self.address_bar_text = ""
         
-        for i, tab in enumerate(self.browser.tabs):
-            if self.tabRectangle(i).contains_point(x, y):
-                self.browser.active_tab = tab
-                return
-
+        else:
+            for i, tab in enumerate(self.browser.tabs):
+                if self.tabRectangle(i).contains_point(x, y):
+                    self.browser.active_tab = tab
+                    break
 
     def keypress(self, char):
         if self.focus == "address bar":
-            self.address_bar += char
+            if char == "BACKSPACE":
+                self.address_bar_text = self.address_bar_text[:-1]
+            else:
+                self.address_bar_text += char
 
     def enter(self):
         if self.focus == "address bar":
-            self.browser.active_tab.load(URL(self.address_bar))
+            self.browser.active_tab.load(URL("https://google.com/search?q={}".format(self.address_bar_text)))
             self.focus = None
                 
-
-    def tabRectangle(self, index):
-        tabStart = self.newTabRectangle.right + self.topPadding
-        tabWidth = self.font.measure("Tab X") + 6*self.topPadding
-        return Draw.Rect(
-            tabStart + tabWidth * index, self.tabbarTop,
-            tabStart + tabWidth * (index + 1), self.tabbarBottom
-        )
-
     def paint(self):
         commands = []
 
@@ -100,7 +102,7 @@ class Chrome:
         commands.append(Draw.DrawRectangle(self.newTabRectangle, navbarBackground))
         commands.append(Draw.DrawText(
                 self.newTabRectangle.left + self.topPadding, 
-                self.newTabRectangle.top + self.topPadding, 
+                self.newTabRectangle.top, 
                 "+", 
                 self.font, 
                 navbarText
@@ -133,7 +135,7 @@ class Chrome:
             commands.append(Draw.DrawText(
                 bounds.left + self.topPadding,
                 bounds.top + self.topPadding,
-                "Tab {}".format(x+1),
+                tab.tabName,
                 self.font,
                 navbarText
             ))
@@ -159,7 +161,7 @@ class Chrome:
 
             if tab == self.browser.active_tab:
                 commands.append(Draw.DrawText(
-                    bounds.right - self.topPadding - self.font.measure("X"),
+                    bounds.right - self.font.measure("X") - self.topPadding,
                     bounds.top + self.topPadding,
                     "X",
                     self.font,
@@ -175,7 +177,7 @@ class Chrome:
 
         commands.append(Draw.DrawText(
             self.backRectangle.left + self.topPadding,
-            self.backRectangle.top + self.topPadding,
+            self.backRectangle.top,
             "<",
             self.font,
             navbarText
@@ -183,15 +185,15 @@ class Chrome:
 
         commands.append(Draw.DrawOutline(self.address_bar, navbarOutline, 1))
         if self.focus == "address bar":
-            commands.append(Draw.DrawRectangle(
+            commands.append(Draw.DrawText(
                 self.address_bar.left + self.topPadding,
                 self.address_bar.top,
-                self.address_bar,
+                self.address_bar_text,
                 self.font,
                 navbarText
             ))
 
-            w = self.font.measure(self.address_bar)
+            w = self.font.measure(self.address_bar_text)
 
             commands.append(Draw.DrawLine(
                 self.address_bar.left + self.topPadding + w,
@@ -206,7 +208,7 @@ class Chrome:
             url = str(self.browser.active_tab.url)
             commands.append(Draw.DrawText(
                 self.address_bar.left + self.topPadding,
-                self.address_bar.top + self.topPadding,
+                self.address_bar.top,
                 url,
                 self.font,
                 navbarText

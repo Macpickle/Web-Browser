@@ -34,7 +34,9 @@ class Tab:
         self.scroll = 0
         self.lastY = 0
         self.history = []
+        self.historyLinks = []
         self.tabHeight = tabHeight
+        self.tabName = ""
 
         # store urls
         self.url = None
@@ -49,7 +51,7 @@ class Tab:
         max_scroll = max(0, self.document.height - self.tabHeight)
         self.scroll = min(max_scroll, max(0, new_scroll))
 
-    def click(self, x, y):
+    def click(self, x, y, middle):
         y += self.scroll
         objs = [obj for obj in treeToList(self.document, [])
                 if obj.x <= x < obj.x + obj.width
@@ -61,7 +63,11 @@ class Tab:
                 pass
             elif elt.tag == "a" and "href" in elt.attributes:
                 url = self.url.resolve(elt.attributes["href"])
-                return self.load(url)
+
+                if middle:
+                    return url
+                else:
+                    return self.load(url)
             elt = elt.parent
 
     def draw(self, canvas, offset):
@@ -76,9 +82,15 @@ class Tab:
                     continue
                 else:
                     raise
+
+    def go_back(self):
+        if len(self.history) > 1:
+            self.history.pop()
+            self.load(self.history[-1])
  
     def load(self, url):
         self.history.append(url)
+        self.historyLinks.append(url.url)
         body, self.tag = url.requests()
         self.url = url
         self.scroll = 0
@@ -94,6 +106,14 @@ class Tab:
                 and node.attributes.get("rel") == "stylesheet"
                 and "href" in node.attributes
             ]
+        
+        # get title of tab
+        title_node = next((node for node in treeToList(self.nodes, [])
+                   if isinstance(node, Element) and node.tag == "title" and node.children), None)
+        if title_node:
+            self.tabName = title_node.children[0].text
+            self.tabName = self.tabName[:15] + "..." if len(self.tabName) > 15 else self.tabName
+
     
         for link in links:
             stylesheetURL = url.resolve(link)
@@ -106,17 +126,14 @@ class Tab:
 
             rules.extend(CSSParser(body).parse())
 
+            
+
         style(self.nodes, sorted(rules, key=cascade_priority))
         self.document = DocumentLayout(self.nodes)
         self.document.layout()
         self.display_list = []
-        paint_tree(self.document, self.display_list)
 
-    def go_back(self):
-        if len(self.history) > 1:
-            self.history.pop()
-            back = self.history.pop()
-            self.load(back)
+        paint_tree(self.document, self.display_list)
         
 # debug for tree structure
 def print_tree(node, indent=0):

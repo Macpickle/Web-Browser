@@ -45,7 +45,7 @@ class HTMLParser:
         # gets attributes of text
     def getAttributes(self, text):
         textParts = text.split()
-        tag = textParts[0].casefold()
+        tag = textParts[0].casefold() if textParts else ""
         attributes = {}
         for part in textParts[1:]:
             if "=" in part:

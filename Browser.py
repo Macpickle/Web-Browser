@@ -8,15 +8,19 @@ class Browser:
     def __init__(self, tags):
         self.tags = tags
         self.tabs = []
+        self.links = []
         self.active_tab = None
         self.initialize()
-        self.chrome = Chrome(self)
 
         self.window.bind("<MouseWheel>", self.handle_scroll)
         self.window.bind("<Configure>", lambda e: self.draw())
         self.window.bind("<Button-1>", self.handle_click)
         self.window.bind("<Key>", self.handle_key)
+        self.window.bind("<BackSpace>", self.handle_backspace)
         self.window.bind("<Return>", self.handle_enter)
+        self.window.bind("<Button-2>", self.handle_middle_click)
+        self.chrome = Chrome(self)
+
         
     def initialize(self):
         self.window = customtkinter.CTk()
@@ -48,16 +52,27 @@ class Browser:
         self.active_tab.scroll_window(e)
         self.draw()
 
+    def handle_middle_click(self, e):
+        tab_y = e.y - self.chrome.bottom
+        res = self.active_tab.click(e.x, tab_y, True)
+        
+        if res:
+            self.new_tab(res)
+        
     def handle_click(self, e):
         if e.y < self.chrome.bottom:
             self.chrome.click(e.x, e.y)
         else:
             tab_y = e.y - self.chrome.bottom
-            self.active_tab.click(e.x, tab_y)
+            self.active_tab.click(e.x, tab_y, False)
         self.draw()
 
     def handle_key(self, e):
         self.chrome.keypress(e.char)
+        self.draw()
+
+    def handle_backspace(self, e):
+        self.chrome.keypress("BACKSPACE")
         self.draw()
 
     def handle_key(self, e):
