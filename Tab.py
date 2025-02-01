@@ -34,6 +34,8 @@ class Tab:
         self.scroll = 0
         self.lastY = 0
         self.history = []
+        self.historyIndex = 0
+
         self.historyLinks = []
         self.tabHeight = tabHeight
         self.tabName = ""
@@ -84,9 +86,17 @@ class Tab:
                     raise
 
     def go_back(self):
-        if len(self.history) > 1:
-            self.history.pop()
-            self.load(self.history[-1])
+        if self.historyIndex > 0:
+            self.historyIndex -= 1
+            self.load(self.history[self.historyIndex])
+
+        else:
+            self.load(self.history[self.historyIndex])
+
+    def go_forward(self):
+        if self.historyIndex < len(self.history) - 1:
+            self.historyIndex += 1
+            self.load(self.history[self.historyIndex])
  
     def load(self, url):
         self.history.append(url)

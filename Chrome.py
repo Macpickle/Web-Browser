@@ -42,8 +42,16 @@ class Chrome:
             self.urlBottom - self.topPadding
         )
 
-        self.address_bar = Draw.Rect(
+        forwardWidth = self.font.measure(">") + 2 * self.topPadding
+        self.forwardRectangle = Draw.Rect(
             self.backRectangle.right + self.topPadding,
+            self.urlTop + self.topPadding,
+            self.backRectangle.right + self.topPadding + forwardWidth,
+            self.urlBottom - self.topPadding
+        )
+
+        self.address_bar = Draw.Rect(
+            self.backRectangle.right + self.topPadding + forwardWidth + self.topPadding,
             self.urlTop + self.topPadding,
             globals.SCwidth - self.topPadding,
             self.urlBottom - self.topPadding
@@ -66,6 +74,9 @@ class Chrome:
         
         elif self.backRectangle.contains_point(x, y):
             self.browser.active_tab.go_back()
+
+        elif self.forwardRectangle.contains_point(x, y):
+            self.browser.active_tab.go_forward()
         
         elif self.address_bar.contains_point(x, y):
             self.focus = "address bar"
@@ -179,6 +190,21 @@ class Chrome:
             self.backRectangle.left + self.topPadding,
             self.backRectangle.top,
             "<",
+            self.font,
+            navbarText
+        ))
+
+        # draw forward button
+        commands.append(Draw.DrawOutline(
+            self.forwardRectangle,
+            navbarOutline,
+            1
+        ))
+
+        commands.append(Draw.DrawText(
+            self.forwardRectangle.left + self.topPadding,
+            self.forwardRectangle.top,
+            ">",
             self.font,
             navbarText
         ))

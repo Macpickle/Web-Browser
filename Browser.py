@@ -67,10 +67,6 @@ class Browser:
             self.active_tab.click(e.x, tab_y, False)
         self.draw()
 
-    def handle_key(self, e):
-        self.chrome.keypress(e.char)
-        self.draw()
-
     def handle_backspace(self, e):
         self.chrome.keypress("BACKSPACE")
         self.draw()
