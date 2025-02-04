@@ -8,7 +8,7 @@ if __name__ == "__main__":
     tags = ""
     if len(sys.argv) >= 2:
         tags = sys.argv[2:]
-    Browser(tags).new_tab(URL(sys.argv[1]))
+    Browser(tags).new_tab(URL(sys.argv[1])) 
 
     if len(sys.argv) > 1:
         url = URL(sys.argv[1])

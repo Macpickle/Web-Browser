@@ -13,7 +13,7 @@ class Browser:
         self.initialize()
 
         self.window.bind("<MouseWheel>", self.handle_scroll)
-        self.window.bind("<Configure>", lambda e: self.draw())
+        self.window.bind("<Configure>", self.resize)
         self.window.bind("<Button-1>", self.handle_click)
         self.window.bind("<Key>", self.handle_key)
         self.window.bind("<BackSpace>", self.handle_backspace)
@@ -31,10 +31,11 @@ class Browser:
         
         self.window.update_idletasks() 
         screen_width = self.window.winfo_screenwidth() + 400 # bad fix, but it works
-        screen_height = self.window.winfo_screenheight()
+        screen_height = self.window.winfo_screenheight() + 125
         globals.update_globals(screen_width, screen_height)
 
     def new_tab(self, url):
+        print(self.chrome.bottom)
         new_tab = Tab(globals.SCheight - self.chrome.bottom)
         new_tab.load(url)
         self.active_tab = new_tab
@@ -79,4 +80,8 @@ class Browser:
 
     def handle_enter(self, e):
         self.chrome.enter()
+        self.draw()
+
+    def resize(self, e):
+        globals.update_globals(e.width, e.height)
         self.draw()
