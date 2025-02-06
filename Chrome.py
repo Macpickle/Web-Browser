@@ -94,11 +94,16 @@ class Chrome:
                 self.address_bar_text = self.address_bar_text[:-1]
             else:
                 self.address_bar_text += char
+            return True
+        return False
 
     def enter(self):
         if self.focus == "address bar":
             self.browser.active_tab.load(URL("https://google.com/search?q={}".format(self.address_bar_text)))
             self.focus = None
+
+    def blur(self):
+        self.focus = None
                 
     def paint(self):
         commands = []
@@ -168,15 +173,6 @@ class Chrome:
                     bounds.bottom,
                     navbarOutline,
                     1
-                ))
-
-            if tab == self.browser.active_tab:
-                commands.append(Draw.DrawText(
-                    bounds.right - self.font.measure("X") - self.topPadding,
-                    bounds.top + self.topPadding,
-                    "X",
-                    self.font,
-                    navbarText
                 ))
 
         # draw back button

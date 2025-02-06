@@ -1,4 +1,5 @@
 from HTMl_Tags import Element, Text, TextLayout, LineLayout
+from inputLayout import InputLayout
 from utils.getFonts import getFonts
 import Draw
 import globals
@@ -84,7 +85,7 @@ class Layout:
                   child.tag in BLOCK_ELEMENTS
                   for child in self.node.children]):
             return "block"
-        elif self.node.children:
+        elif self.node.children or self.node.tag == "input":
             return "inline"
         else:
             return "block"
@@ -137,6 +138,26 @@ class Layout:
         max_descent = max([metric["descent"] for metric in metrics])
         self.cursor_y = baseline + 1.25 * max_descent
 
+    # create new input layout
+    def input(self, node):
+        w = globals.INPUT_WIDTH
+
+        if self.cursor_x + w > self.width:
+            self.newLine()
+
+        line = self.children[-1]
+        prevWord = line.children[-1] if line.children else None
+        input = InputLayout(node, line, prevWord)
+        line.children.append(input)
+
+        weight = node.style["font-weight"]
+        style = node.style["font-style"]
+        if style == "normal": style = "roman"
+        size = int(float(node.style["font-size"][:-2]) * .75)
+        font = getFonts(size, weight, style)
+
+        self.cursor_x += w + font.measure(" ")
+
     def recurse(self, node):
         if isinstance(node, Text):
             for word in node.text.split():
@@ -146,8 +167,11 @@ class Layout:
             if node.tag in ["i", "sup", "abbr", "b", "small", "big", "center", "br", "p", "h1", "pre"]:
                 self.swapTag(node.tag)
 
-            if node.tag == "br":
+            elif node.tag == "br":
                 self.newLine()
+            
+            elif node.tag == "input" or node.tag == "button":
+                self.input(node)
             
             for child in node.children:
                 self.recurse(child)
@@ -191,6 +215,10 @@ class Layout:
         elif tag == "pre":
             self.newLine()
             self.cursor_x = globals.HSTEP
+
+    # determines if the node should be painted, based on tag
+    def should_paint(self):
+        return isinstance(self.node, Text) or (self.node.tag != "input" and self.node.tag !=  "button")
 
     def paint(self):
         commands = []

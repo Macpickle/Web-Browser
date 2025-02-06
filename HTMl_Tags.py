@@ -7,6 +7,7 @@ class Text:
         self.text = text
         self.children = []
         self.parent = parent
+        self.focused = False
 
     def __repr__(self):
         return repr(self.text)
@@ -17,6 +18,7 @@ class Element:
         self.attributes = attributes
         self.children = []
         self.parent = parent
+        self.focused = False
 
     def __repr__(self):
         return repr(self.tag)
@@ -79,6 +81,9 @@ class LineLayout:
         max_descent = max([word.font.metrics("descent") for word in self.children])
         self.height = 1.25 * (max_ascent + max_descent)
 
+    def should_paint(self):
+        return True
+
     def paint(self):
         return []
 
@@ -107,6 +112,9 @@ class TextLayout:
             self.x = self.parent.x
 
         self.height = self.font.metrics("linespace")
+
+    def should_paint(self):
+        return True
 
     def paint(self):
         color = self.node.style["color"]

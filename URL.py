@@ -21,6 +21,18 @@ class URL:
         self.parse_url(url)
         self.connection = "close"  # add keep-alive
 
+        if self.scheme == "http":
+            self.port = 80
+
+        elif self.scheme == "https":
+            self.port = 443
+
+        elif self.scheme == "file":
+            return open(self.host, "r").read()
+        
+        elif self.scheme == "data:text/html":
+            return checkEntity(self.host), None
+
     def parse_url(self, url):
         # separate scheme from url
         for scheme in self.schemes:
@@ -63,13 +75,13 @@ class URL:
         else:
             return URL(self.scheme + "://" + self.host + ":" + str(self.port) + url)
 
-    def requests(self, max_redirects = 3) -> object:
+    def requests(self, max_redirects = 3, payload=None) -> object:
         if self.scheme == "about":
             return "",  None
         
         if max_redirects <= 0:
             raise Exception("Too many redirects")
-
+        
         # create a socket to connect to host
         s = socket.socket(
             family=socket.AF_INET,
@@ -77,35 +89,33 @@ class URL:
             proto=socket.IPPROTO_TCP,
         )
 
-        # connect to different schemes
-        if self.scheme == "http":
-            self.port = 80
-
-        elif self.scheme == "https":
-            self.port = 443
-            ctx = ssl.create_default_context()
-            s = ctx.wrap_socket(s, server_hostname=self.host)
-
-        elif self.scheme == "file":
-            return open(self.host, "r").read()
-        
-        elif self.scheme == "data:text/html":
-            return checkEntity(self.host), None
-        
         s.connect((self.host, self.port))
 
+        if self.scheme == "https":
+            ctx = ssl.create_default_context()
+            s = ctx.wrap_socket(s, server_hostname=self.host)
+        
         self.encoding = "gzip"
 
+        method = "POST" if payload else "GET"
+        request = "{} {} HTTP/1.0\r\n".format(method, self.path)
+
+        if payload:
+            length = len(payload.encode("utf8"))
+            request += "Content-Length: {}\r\n".format(length)
+
         # send data via send method
-        request = "GET {} HTTP/1.0\r\n".format(self.path)
         request += "Host: {}\r\n".format(self.host)
         request += "Connection: {}\r\n".format(self.connection)
         request += "Accept-Encoding: {}\r\n".format(self.encoding)
         request += "\r\n"
+
+        if payload:
+            request += payload
         s.send(request.encode("utf8"))
 
         # read the response
-        response = s.makefile("rb")
+        response = s.makefile("rb", encoding="utf-8")
         status_line = response.readline().decode("utf-8")
         status = status_line.split(" ")[1]
 

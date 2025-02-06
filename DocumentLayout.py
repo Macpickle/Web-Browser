@@ -19,5 +19,8 @@ class DocumentLayout:
         child.layout()
         self.height = child.height
 
+    def should_paint(self):
+        return True
+
     def paint(self):
         return []
